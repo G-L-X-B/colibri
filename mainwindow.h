@@ -3,6 +3,7 @@
 
 #include <memory>
 
+#include <QDir>
 #include <QFuture>
 #include <QMainWindow>
 #include <QPromise>
@@ -57,6 +58,7 @@ private:
 
 
     uint64_t parse_bit_mask(const QString &source);
+    QString find_new_file_name(const QDir &dir, const QString &name);
 
     QFuture<void> job;
     Ui::MainWindow *ui;

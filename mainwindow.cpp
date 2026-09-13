@@ -166,13 +166,19 @@ void MainWindow::process_files(QPromise<void> &promise)
         cout << "iteration: " << i << endl;
         cout << "file name: " << file_list[i].toStdString() << endl;
         QFile in_file(source_dir.filePath(file_list[i]));
-        auto res = in_file.open(QIODevice::ReadOnly);
+        bool res = in_file.open(QIODevice::ReadOnly);
         cout << "res: " << res << endl;
         QDataStream in(&in_file);
         cout << "datastream intact" << endl;
 
-        QFile dest_file(dest_dir.filePath(file_list[i]));
-        cout << "dest_file name: " << dest_file.fileName().toStdString() << endl;
+        QString dest_file_name;
+        if (config->policy == Config::DuplicatesPolicy::kRename)
+            dest_file_name = find_new_file_name(dest_dir, file_list[i]);
+        else
+            dest_file_name = file_list[i];
+        cout << "dest_file name: " << dest_file_name.toStdString() << endl;
+
+        QFile dest_file(dest_dir.filePath(dest_file_name));
         res = dest_file.open(QIODevice::WriteOnly);
         cout << "res: " << res << endl;
         QDataStream out(&dest_file);
@@ -181,12 +187,9 @@ void MainWindow::process_files(QPromise<void> &promise)
         uint64_t buffer;
         qint64 len;
         qsizetype file_size = 0;
-        cout << "starting file read" << endl;
         while (!in.atEnd() && !stop) {
             len = in.readRawData((char *)&buffer, 8);
-            cout << "read " << len << " bytes: " << std::hex << buffer << std::dec << endl;
             file_size += len;
-            cout << "total file_size: " << file_size << endl;
             if (config->operator_ == "AND") {
                 buffer &= mask;
             } else if (config->operator_ == "OR") {
@@ -194,7 +197,6 @@ void MainWindow::process_files(QPromise<void> &promise)
             } else if (config->operator_ == "XOR") {
                 buffer ^= mask;
             }
-            cout << "buffer after: " << std::hex << buffer << std::dec << endl;
             out.writeRawData((char *)&buffer, len);
 
             promise.suspendIfRequested();
@@ -235,6 +237,16 @@ uint64_t MainWindow::parse_bit_mask(const QString &source)
     return mask;
 }
 
+QString MainWindow::find_new_file_name(const QDir &dir, const QString &name)
+{
+    QFile file(dir.filePath(name));
+    int next_index = 1;
+    while (file.exists()) {
+        file.setFileName(dir.filePath(name + "-" + QString::number(next_index)));
+        ++next_index;
+    }
+    return file.fileName();
+}
 
 
 
