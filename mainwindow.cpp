@@ -12,6 +12,7 @@
 #include <QFileDialog>
 #include <QIODevice>
 #include <QRegularExpression>
+#include <QRegularExpressionMatch>
 #include <QString>
 #include <QToolTip>
 
@@ -161,6 +162,7 @@ void MainWindow::process_files(QPromise<void> &promise)
     QDir source_dir(config->input_path);
     QDir dest_dir(config->output_path);
     QStringList file_list = source_dir.entryList(QDir::Files);
+    file_list = filter_matching_filenames(file_list);
     bool stop = false;
 
     for (qsizetype i = 0; i < file_list.size() && !stop; ++i) {
@@ -187,10 +189,8 @@ void MainWindow::process_files(QPromise<void> &promise)
 
         uint64_t buffer;
         qint64 len;
-        qsizetype file_size = 0;
         while (!in.atEnd() && !stop) {
             len = in.readRawData((char *)&buffer, 8);
-            file_size += len;
             if (config->operator_ == "AND") {
                 buffer &= mask;
             } else if (config->operator_ == "OR") {
@@ -244,6 +244,18 @@ uint64_t MainWindow::parse_bit_mask(const QString &source)
         mask |= b << power;
     }
     return mask;
+}
+
+QStringList MainWindow::filter_matching_filenames(const QStringList &source)
+{
+    QStringList res;
+    for (const QString &name : source) {
+        QRegularExpressionMatch match = config->file_regex.match(name);
+        if (match.hasMatch()) {
+            res.push_back(name);
+        }
+    }
+    return res;
 }
 
 QString MainWindow::find_new_file_name(const QDir &dir, const QString &name)
