@@ -63,6 +63,9 @@
       </item>
       <item row="2" column="1">
        <widget class="QLineEdit" name="fileMaskInput">
+        <property name="text">
+         <string>.*</string>
+        </property>
         <property name="placeholderText">
          <string>regex</string>
         </property>
@@ -78,7 +81,11 @@
       <item row="4" column="1">
        <layout class="QHBoxLayout" name="outputPathLayout">
         <item>
-         <widget class="QLineEdit" name="outputPathInput"/>
+         <widget class="QLineEdit" name="outputPathInput">
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
         </item>
         <item>
          <widget class="QPushButton" name="outputPathButton">

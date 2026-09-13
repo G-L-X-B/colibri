@@ -58,6 +58,8 @@ private:
 
     void stop_processing();
 
+    void process_file(QPromise<void> &promise, const QString &file_name);
+
     uint64_t parse_bit_mask(const QString &source);
     QStringList filter_matching_filenames(const QStringList &source);
     QString find_new_file_name(const QDir &dir, const QString &name);

@@ -158,9 +158,7 @@ void MainWindow::process_files(QPromise<void> &promise)
     using std::endl;
     cout << "<< process_files" << endl;
 
-    uint64_t mask = config->bitmask;
     QDir source_dir(config->input_path);
-    QDir dest_dir(config->output_path);
     QStringList file_list = source_dir.entryList(QDir::Files);
     file_list = filter_matching_filenames(file_list);
     bool stop = false;
@@ -168,45 +166,8 @@ void MainWindow::process_files(QPromise<void> &promise)
     for (qsizetype i = 0; i < file_list.size() && !stop; ++i) {
         cout << "iteration: " << i << endl;
         cout << "file name: " << file_list[i].toStdString() << endl;
-        QFile in_file(source_dir.filePath(file_list[i]));
-        bool res = in_file.open(QIODevice::ReadOnly);
-        cout << "res: " << res << endl;
-        QDataStream in(&in_file);
-        cout << "datastream intact" << endl;
 
-        QString dest_file_name;
-        if (config->policy == Config::DuplicatesPolicy::kRename)
-            dest_file_name = find_new_file_name(dest_dir, file_list[i]);
-        else
-            dest_file_name = file_list[i];
-        cout << "dest_file name: " << dest_file_name.toStdString() << endl;
-
-        QFile dest_file(dest_dir.filePath(dest_file_name));
-        res = dest_file.open(QIODevice::WriteOnly);
-        cout << "res: " << res << endl;
-        QDataStream out(&dest_file);
-        cout << "datastream intact" << endl;
-
-        uint64_t buffer;
-        qint64 len;
-        while (!in.atEnd() && !stop) {
-            len = in.readRawData((char *)&buffer, 8);
-            if (config->operator_ == "AND") {
-                buffer &= mask;
-            } else if (config->operator_ == "OR") {
-                buffer |= mask;
-            } else if (config->operator_ == "XOR") {
-                buffer ^= mask;
-            }
-            out.writeRawData((char *)&buffer, len);
-
-            promise.suspendIfRequested();
-            stop = promise.isCanceled();
-        }
-        in_file.close();
-        dest_file.close();
-        if (!stop && config->remove_processed)
-            in_file.remove();
+        process_file(promise, file_list[i]);
 
         promise.suspendIfRequested();
         stop = promise.isCanceled();
@@ -232,6 +193,54 @@ void MainWindow::stop_processing()
         job.cancel();
         job.waitForFinished();
     }
+}
+
+void MainWindow::process_file(QPromise<void> &promise, const QString &file_name)
+{
+    using std::cout;
+    using std::endl;
+
+    uint64_t mask = config->bitmask;
+    QDir source_dir(config->input_path);
+    QDir dest_dir(config->output_path);
+
+    QFile in_file(source_dir.filePath(file_name));
+    in_file.open(QIODevice::ReadOnly);
+    QDataStream in(&in_file);
+
+    QString dest_file_name;
+    if (config->policy == Config::DuplicatesPolicy::kRename)
+        dest_file_name = find_new_file_name(dest_dir, file_name);
+    else
+        dest_file_name = file_name;
+    cout << "dest_file name: " << dest_file_name.toStdString() << endl;
+
+    QFile dest_file(dest_dir.filePath(dest_file_name));
+    dest_file.open(QIODevice::WriteOnly);
+    QDataStream out(&dest_file);
+
+    bool stop = false;
+
+    uint64_t buffer;
+    qint64 len;
+    while (!in.atEnd() && !stop) {
+        len = in.readRawData((char *)&buffer, 8);
+        if (config->operator_ == "AND") {
+            buffer &= mask;
+        } else if (config->operator_ == "OR") {
+            buffer |= mask;
+        } else if (config->operator_ == "XOR") {
+            buffer ^= mask;
+        }
+        out.writeRawData((char *)&buffer, len);
+
+        promise.suspendIfRequested();
+        stop = promise.isCanceled();
+    }
+    in_file.close();
+    dest_file.close();
+    if (!stop && config->remove_processed)
+        in_file.remove();
 }
 
 uint64_t MainWindow::parse_bit_mask(const QString &source)
