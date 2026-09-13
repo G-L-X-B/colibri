@@ -6,8 +6,11 @@
 
 #include <QtConcurrent/QtConcurrentRun>
 
+#include <QDataStream>
 #include <QDir>
+#include <QFile>
 #include <QFileDialog>
+#include <QIODevice>
 #include <QRegularExpression>
 #include <QString>
 #include <QToolTip>
@@ -56,7 +59,6 @@ void MainWindow::on_outputPathButton_clicked()
     ui->outputPathInput->setText(path);
 }
 
-
 void MainWindow::on_startButton_clicked()
 {
     if (job.isRunning()) {
@@ -68,8 +70,10 @@ void MainWindow::on_startButton_clicked()
 void MainWindow::start_processing()
 {
     gather_config();
-    // ui->startButton->setText(tr("Stop"));
-
+    if (config != nullptr) {
+        ui->startButton->setText(tr("Stop"));
+        run_job();
+    }
 }
 
 void MainWindow::gather_config()
@@ -141,13 +145,82 @@ void MainWindow::gather_config()
 
 void MainWindow::run_job()
 {
-    // job = QtConcurrent::run()
+    if (job.isRunning())
+        return;
+    job = QtConcurrent::run(&MainWindow::process_files, this);
 }
-
 
 void MainWindow::process_files(QPromise<void> &promise)
 {
+    using std::cout;
+    using std::endl;
+    cout << "<< process_files" << endl;
 
+    uint64_t mask = config->bitmask;
+    QDir source_dir(config->input_path);
+    QDir dest_dir(config->output_path);
+    QStringList file_list = source_dir.entryList(QDir::Files);
+    bool stop = false;
+
+    for (qsizetype i = 0; i < file_list.size() && !stop; ++i) {
+        cout << "iteration: " << i << endl;
+        cout << "file name: " << file_list[i].toStdString() << endl;
+        QFile in_file(source_dir.filePath(file_list[i]));
+        auto res = in_file.open(QIODevice::ReadOnly);
+        cout << "res: " << res << endl;
+        QDataStream in(&in_file);
+        cout << "datastream intact" << endl;
+
+        QFile dest_file(dest_dir.filePath(file_list[i]));
+        cout << "dest_file name: " << dest_file.fileName().toStdString() << endl;
+        res = dest_file.open(QIODevice::WriteOnly);
+        cout << "res: " << res << endl;
+        QDataStream out(&dest_file);
+        cout << "datastream intact" << endl;
+
+        uint64_t buffer;
+        qint64 len;
+        qsizetype file_size = 0;
+        cout << "starting file read" << endl;
+        while (!in.atEnd() && !stop) {
+            len = in.readRawData((char *)&buffer, 8);
+            cout << "read " << len << " bytes: " << std::hex << buffer << std::dec << endl;
+            file_size += len;
+            cout << "total file_size: " << file_size << endl;
+            if (config->operator_ == "AND") {
+                buffer &= mask;
+            } else if (config->operator_ == "OR") {
+                buffer |= mask;
+            } else if (config->operator_ == "XOR") {
+                buffer ^= mask;
+            }
+            cout << "buffer after: " << std::hex << buffer << std::dec << endl;
+            out.writeRawData((char *)&buffer, len);
+
+            promise.suspendIfRequested();
+            stop = promise.isCanceled();
+        }
+        in_file.close();
+        dest_file.close();
+        if (!stop && config->remove_processed)
+            in_file.remove();
+
+        promise.suspendIfRequested();
+        stop = promise.isCanceled();
+    }
+    finish_job();
+    cout << ">> process_files" << endl;
+}
+
+void MainWindow::finish_job()
+{
+    clean_up();
+}
+
+void MainWindow::clean_up()
+{
+    ui->startButton->setText(tr("Start"));
+    config.reset();
 }
 
 uint64_t MainWindow::parse_bit_mask(const QString &source)

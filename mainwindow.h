@@ -52,6 +52,9 @@ private:
 
     void process_files(QPromise<void> &promise);
 
+    void finish_job();
+    void clean_up();
+
 
     uint64_t parse_bit_mask(const QString &source);
 
