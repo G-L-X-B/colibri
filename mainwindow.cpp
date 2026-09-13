@@ -62,6 +62,7 @@ void MainWindow::on_outputPathButton_clicked()
 void MainWindow::on_startButton_clicked()
 {
     if (job.isRunning()) {
+        stop_processing();
     } else {
         start_processing();
     }
@@ -223,6 +224,14 @@ void MainWindow::clean_up()
 {
     ui->startButton->setText(tr("Start"));
     config.reset();
+}
+
+void MainWindow::stop_processing()
+{
+    if (job.isRunning()) {
+        job.cancel();
+        job.waitForFinished();
+    }
 }
 
 uint64_t MainWindow::parse_bit_mask(const QString &source)

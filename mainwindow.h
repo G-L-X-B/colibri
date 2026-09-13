@@ -56,6 +56,7 @@ private:
     void finish_job();
     void clean_up();
 
+    void stop_processing();
 
     uint64_t parse_bit_mask(const QString &source);
     QString find_new_file_name(const QDir &dir, const QString &name);
