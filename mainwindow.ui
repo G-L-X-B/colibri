@@ -94,6 +94,12 @@
         <property name="text">
          <string>Rewrite duplicates</string>
         </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">duplicatePolicyGroup</string>
+        </attribute>
        </widget>
       </item>
       <item row="6" column="1">
@@ -101,10 +107,19 @@
         <property name="text">
          <string>Rename duplicates</string>
         </property>
+        <attribute name="buttonGroup">
+         <string notr="true">duplicatePolicyGroup</string>
+        </attribute>
        </widget>
       </item>
       <item row="8" column="1">
        <widget class="QLineEdit" name="bitMaskInput">
+        <property name="inputMask">
+         <string>HH HH HH HH HH HH HH HH</string>
+        </property>
+        <property name="text">
+         <string>FF FF FF FF FF FF FF FF</string>
+        </property>
         <property name="placeholderText">
          <string>FF FF FF FF FF FF FF FF</string>
         </property>
@@ -171,4 +186,7 @@
  </widget>
  <resources/>
  <connections/>
+ <buttongroups>
+  <buttongroup name="duplicatePolicyGroup"/>
+ </buttongroups>
 </ui>
