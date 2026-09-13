@@ -1,14 +1,14 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <memory>
-
 #include <QDir>
 #include <QFuture>
 #include <QMainWindow>
 #include <QPromise>
 #include <QRegularExpression>
+#include <QSharedPointer>
 #include <QString>
+#include <QTimer>
 
 
 QT_BEGIN_NAMESPACE
@@ -58,6 +58,8 @@ private:
 
     void stop_processing();
 
+    void warn_bad_timing();
+
     void process_file(QPromise<void> &promise, const QString &file_name);
 
     uint64_t parse_bit_mask(const QString &source);
@@ -66,7 +68,8 @@ private:
 
     QFuture<void> job;
     Ui::MainWindow *ui;
-    std::shared_ptr<Config> config;
+    QSharedPointer<QTimer> timer;
+    QSharedPointer<Config> config;
 };
 
 #endif // MAINWINDOW_H

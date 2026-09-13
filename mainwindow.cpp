@@ -2,7 +2,6 @@
 #include "ui_mainwindow.h"
 
 #include <iostream>
-#include <memory>
 
 #include <QtConcurrent/QtConcurrentRun>
 
@@ -13,13 +12,16 @@
 #include <QIODevice>
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
+#include <QSharedPointer>
 #include <QString>
+#include <QTime>
 #include <QToolTip>
 
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+    , timer(new QTimer)
     , config(nullptr)
 {
     ui->setupUi(this);
@@ -33,6 +35,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->duplicatePolicyGroup->setId(
         ui->rewriteButton,
         Config::DuplicatesPolicy::kRewrte);
+
+    connect(timer.data(), &QTimer::timeout, this, &MainWindow::run_job);
 }
 
 MainWindow::~MainWindow()
@@ -45,8 +49,7 @@ void MainWindow::on_inputPathButton_clicked()
     QString path = QFileDialog::getExistingDirectory(
         nullptr,
         tr("Select an input directory"),
-        ui->inputPathInput->text()
-    );
+        ui->inputPathInput->text());
     ui->inputPathInput->setText(path);
 }
 
@@ -55,14 +58,13 @@ void MainWindow::on_outputPathButton_clicked()
     QString path = QFileDialog::getExistingDirectory(
         nullptr,
         tr("Select an output directory"),
-        ui->outputPathInput->text()
-        );
+        ui->outputPathInput->text());
     ui->outputPathInput->setText(path);
 }
 
 void MainWindow::on_startButton_clicked()
 {
-    if (job.isRunning()) {
+    if (job.isRunning() || timer->isActive()) {
         stop_processing();
     } else {
         start_processing();
@@ -75,6 +77,8 @@ void MainWindow::start_processing()
     if (config != nullptr) {
         ui->startButton->setText(tr("Stop"));
         run_job();
+        if (ui->repeatCheckBox->isChecked())
+            timer->start();
     }
 }
 
@@ -114,7 +118,8 @@ void MainWindow::gather_config()
         return;
     }
 
-    std::shared_ptr<Config> tmp = std::make_shared<Config>();
+    QSharedPointer<Config> tmp = QSharedPointer<Config>::create();
+    cout << "New shared tmp" << endl;
     tmp->input_path = ui->inputPathInput->text().isEmpty()
                         ? ui->inputPathInput->placeholderText()
                         : ui->inputPathInput->text();
@@ -126,6 +131,7 @@ void MainWindow::gather_config()
     tmp->bitmask = parse_bit_mask(ui->bitMaskInput->text());
     tmp->policy = static_cast<Config::DuplicatesPolicy>(ui->duplicatePolicyGroup->checkedId());
     tmp->remove_processed = ui->deleteInputFilesCheckBox->isChecked();
+    cout << "tmp all set up" << endl;
 
     if (tmp->input_path == tmp->output_path) {
         QToolTip::showText(
@@ -143,12 +149,20 @@ void MainWindow::gather_config()
     cout << "remove_processed: " << std::boolalpha << tmp->remove_processed << endl;
 
     config.swap(tmp);
+
+    if (ui->repeatCheckBox->isChecked()) {
+        QTime time = ui->timeEdit->time();
+        cout << "msec time since start of day: " << time.msecsSinceStartOfDay() << endl;
+        timer->setInterval(time.msecsSinceStartOfDay());
+    }
 }
 
 void MainWindow::run_job()
 {
-    if (job.isRunning())
+    if (job.isRunning()) {
+        warn_bad_timing();
         return;
+    }
     job = QtConcurrent::run(&MainWindow::process_files, this);
 }
 
@@ -178,7 +192,8 @@ void MainWindow::process_files(QPromise<void> &promise)
 
 void MainWindow::finish_job()
 {
-    clean_up();
+    if (!timer->isActive())
+        clean_up();
 }
 
 void MainWindow::clean_up()
@@ -189,10 +204,26 @@ void MainWindow::clean_up()
 
 void MainWindow::stop_processing()
 {
+    if (timer->isActive())
+        timer->stop();
+    /*
+     * Control flow enters this function if the job is running
+     * or if the timer is active. If the job is not running, call
+     * clean up function explicitly.
+     */
     if (job.isRunning()) {
         job.cancel();
         job.waitForFinished();
+    } else {
+        clean_up();
     }
+}
+
+void MainWindow::warn_bad_timing()
+{
+    QToolTip::showText(
+        ui->timeEdit->pos() + pos(),
+        tr("Timer set off while old job is running"));
 }
 
 void MainWindow::process_file(QPromise<void> &promise, const QString &file_name)

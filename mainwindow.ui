@@ -166,7 +166,14 @@
        </widget>
       </item>
       <item row="7" column="1">
-       <widget class="QTimeEdit" name="timeEdit"/>
+       <widget class="QTimeEdit" name="timeEdit">
+        <property name="currentSection">
+         <enum>QDateTimeEdit::Section::SecondSection</enum>
+        </property>
+        <property name="displayFormat">
+         <string>HH:mm:ss</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>
