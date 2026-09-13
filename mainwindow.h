@@ -1,7 +1,11 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <memory>
+
+#include <QFuture>
 #include <QMainWindow>
+#include <QPromise>
 #include <QRegularExpression>
 #include <QString>
 
@@ -25,6 +29,8 @@ private slots:
 
     void on_outputPathButton_clicked();
 
+    void on_startButton_clicked();
+
 private:
     struct Config {
         enum DuplicatesPolicy {kRewrte, kRename};
@@ -38,9 +44,20 @@ private:
         bool remove_processed;
     };
 
+    void start_processing();
+
+    void gather_config();
+
+    void run_job();
+
+    void process_files(QPromise<void> &promise);
+
+
+    uint64_t parse_bit_mask(const QString &source);
+
+    QFuture<void> job;
     Ui::MainWindow *ui;
-    Config *config;
-    bool running;
+    std::shared_ptr<Config> config;
 };
 
 #endif // MAINWINDOW_H

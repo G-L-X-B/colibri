@@ -1,15 +1,22 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include <iostream>
+#include <memory>
+
+#include <QtConcurrent/QtConcurrentRun>
+
 #include <QDir>
 #include <QFileDialog>
+#include <QRegularExpression>
+#include <QString>
+#include <QToolTip>
 
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , config(nullptr)
-    , running(false)
 {
     ui->setupUi(this);
 
@@ -39,7 +46,6 @@ void MainWindow::on_inputPathButton_clicked()
     ui->inputPathInput->setText(path);
 }
 
-
 void MainWindow::on_outputPathButton_clicked()
 {
     QString path = QFileDialog::getExistingDirectory(
@@ -49,5 +55,137 @@ void MainWindow::on_outputPathButton_clicked()
         );
     ui->outputPathInput->setText(path);
 }
+
+
+void MainWindow::on_startButton_clicked()
+{
+    if (job.isRunning()) {
+    } else {
+        start_processing();
+    }
+}
+
+void MainWindow::start_processing()
+{
+    gather_config();
+    // ui->startButton->setText(tr("Stop"));
+
+}
+
+void MainWindow::gather_config()
+{
+    using std::cout;
+    using std::endl;
+    QString pattern = ui->fileMaskInput->text();
+    QRegularExpression regex(QRegularExpression::anchoredPattern(pattern));
+    if (!regex.isValid()) {
+        QToolTip::showText(
+            ui->fileMaskInput->pos() + pos(),
+            tr("Invalid regular expression"));
+        return;
+    }
+
+    QString inputPath = ui->inputPathInput->text();
+    if (!QDir(inputPath).exists()) {
+        QToolTip::showText(
+            ui->inputPathInput->pos() + pos(),
+            tr("An existing path is expected"));
+        return;
+    }
+
+    QString outputPath = ui->outputPathInput->text();
+    if (!QDir(outputPath).exists()) {
+        QToolTip::showText(
+            ui->outputPathInput->pos() + pos(),
+            tr("An existing path is expected"));
+        return;
+    }
+
+    if (!ui->bitMaskInput->hasAcceptableInput()) {
+        QToolTip::showText(
+            ui->bitMaskInput->pos() + pos(),
+            tr("A full 8-byte mask is expected"));
+        return;
+    }
+
+    std::shared_ptr<Config> tmp = std::make_shared<Config>();
+    tmp->input_path = ui->inputPathInput->text().isEmpty()
+                        ? ui->inputPathInput->placeholderText()
+                        : ui->inputPathInput->text();
+    tmp->output_path = ui->outputPathInput->text().isEmpty()
+                        ? ui->outputPathInput->placeholderText()
+                        : ui->outputPathInput->text();
+    tmp->operator_ = ui->operatorComboBox->currentText();
+    tmp->file_regex = regex;
+    tmp->bitmask = parse_bit_mask(ui->bitMaskInput->text());
+    tmp->policy = static_cast<Config::DuplicatesPolicy>(ui->duplicatePolicyGroup->checkedId());
+    tmp->remove_processed = ui->deleteInputFilesCheckBox->isChecked();
+
+    if (tmp->input_path == tmp->output_path) {
+        QToolTip::showText(
+            ui->outputPathInput->pos() + pos(),
+            tr("Output path must differ from input path"));
+        return;
+    }
+
+    cout << "input_path: " << tmp->input_path.toStdString() << endl;
+    cout << "output_path: " << tmp->output_path.toStdString() << endl;
+    cout << "operator_: " << tmp->operator_.toStdString() << endl;
+    cout << "file_regex: " << tmp->file_regex.pattern().toStdString() << endl;
+    cout << "bitmask: " << std::hex << tmp->bitmask << std::dec << endl;
+    cout << "policy: " << tmp->policy << endl;
+    cout << "remove_processed: " << std::boolalpha << tmp->remove_processed << endl;
+
+    config.swap(tmp);
+}
+
+void MainWindow::run_job()
+{
+    // job = QtConcurrent::run()
+}
+
+
+void MainWindow::process_files(QPromise<void> &promise)
+{
+
+}
+
+uint64_t MainWindow::parse_bit_mask(const QString &source)
+{
+    QStringList bytes = source.split(" ", Qt::SkipEmptyParts);
+    uint64_t mask = 0ULL;
+    for (qsizetype i = 0; i < bytes.size(); ++i) {
+        uint64_t b = bytes[i].toUShort(nullptr, 16);
+        uint power = bytes.size() * (7 - i);
+        mask |= b << power;
+    }
+    return mask;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
