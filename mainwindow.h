@@ -20,6 +20,11 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
 
+private slots:
+    void on_inputPathButton_clicked();
+
+    void on_outputPathButton_clicked();
+
 private:
     struct Config {
         enum DuplicatesPolicy {kRewrte, kRename};
