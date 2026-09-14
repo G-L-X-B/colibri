@@ -288,6 +288,8 @@ void MainWindow::process_file(QPromise<void> &promise, Config::ProgressData &fil
 void MainWindow::finish_job()
 {
     ui->statusbar->showMessage(tr("All done"));
+    config->progress.clear();
+    config->started = false;
     if (!timer->isActive())
         clean_up();
 }
