@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 
 #include <iostream>
+#include <utility>
 
 #include <QtConcurrent/QtConcurrentRun>
 
@@ -66,6 +67,8 @@ void MainWindow::on_startButton_clicked()
 {
     if (job.isRunning() || timer->isActive()) {
         stop_processing();
+    } else if (config != nullptr) {
+        resume_processing();
     } else {
         start_processing();
     }
@@ -119,7 +122,6 @@ void MainWindow::gather_config()
     }
 
     QSharedPointer<Config> tmp = QSharedPointer<Config>::create();
-    cout << "New shared tmp" << endl;
     tmp->input_path = ui->inputPathInput->text().isEmpty()
                         ? ui->inputPathInput->placeholderText()
                         : ui->inputPathInput->text();
@@ -131,7 +133,8 @@ void MainWindow::gather_config()
     tmp->bitmask = parse_bit_mask(ui->bitMaskInput->text());
     tmp->policy = static_cast<Config::DuplicatesPolicy>(ui->duplicatePolicyGroup->checkedId());
     tmp->remove_processed = ui->deleteInputFilesCheckBox->isChecked();
-    cout << "tmp all set up" << endl;
+    tmp->started = false;
+    // tmp->progress = QList<Config::ProgressData>();
 
     if (tmp->input_path == tmp->output_path) {
         QToolTip::showText(
@@ -172,22 +175,94 @@ void MainWindow::process_files(QPromise<void> &promise)
     using std::endl;
     cout << "<< process_files" << endl;
 
+    if (!config->started) {
+        prepare_files();
+        config->started = true;
+    }
+
+    bool stopped = false;
+    for (Config::ProgressData &file_progress : config->progress) {
+        if (file_progress.file_size != file_progress.progress)
+            process_file(promise, file_progress);
+
+        promise.suspendIfRequested();
+        if (promise.isCanceled()) {
+            stopped = true;
+            break;
+        }
+    }
+    if (!stopped)
+        finish_job();
+    cout << ">> process_files" << endl;
+}
+
+void MainWindow::prepare_files()
+{
     QDir source_dir(config->input_path);
-    QStringList file_list = source_dir.entryList(QDir::Files);
-    file_list = filter_matching_filenames(file_list);
+    QDir dest_dir(config->output_path);
+    QStringList file_list = filter_matching_filenames(source_dir.entryList(QDir::Files));
+    // file_list = filter_matching_filenames(file_list);
+    for (const QString &file_name : std::as_const(file_list)) {
+        QString dest_file_name;
+        if (config->policy == Config::DuplicatesPolicy::kRename)
+            dest_file_name = find_new_file_name(dest_dir, file_name);
+        else
+            dest_file_name = file_name;
+        config->progress.push_back({
+            source_dir.filePath(file_name),
+            dest_dir.filePath(dest_file_name),
+            QFile(source_dir.filePath(file_name)).size(),
+            0U
+        });
+    }
+}
+
+void MainWindow::process_file(QPromise<void> &promise, Config::ProgressData &file_progress)
+{
+    using std::cout;
+    using std::endl;
+
+    uint64_t mask = config->bitmask;
+
+    QFile in_file(file_progress.input_filename);
+    in_file.open(QIODevice::ReadOnly);
+    QDataStream in(&in_file);
+
+    QFile dest_file(file_progress.output_filename);
+    if (file_progress.progress) {
+        dest_file.open(QIODevice::WriteOnly | QIODevice::Append);
+    } else {
+        dest_file.open(QIODevice::WriteOnly);
+    }
+    QDataStream out(&dest_file);
+
     bool stop = false;
 
-    for (qsizetype i = 0; i < file_list.size() && !stop; ++i) {
-        cout << "iteration: " << i << endl;
-        cout << "file name: " << file_list[i].toStdString() << endl;
-
-        process_file(promise, file_list[i]);
+    uint64_t buffer;
+    qint64 len;
+    if (file_progress.progress) {
+        in.skipRawData(file_progress.progress);
+        out.device()->skip(file_progress.progress);
+    }
+    while (!in.atEnd() && !stop) {
+        len = in.readRawData((char *)&buffer, 8);
+        file_progress.progress += len;
+        if (config->operator_ == "AND") {
+            buffer &= mask;
+        } else if (config->operator_ == "OR") {
+            buffer |= mask;
+        } else if (config->operator_ == "XOR") {
+            buffer ^= mask;
+        }
+        out.writeRawData((char *)&buffer, len);
 
         promise.suspendIfRequested();
         stop = promise.isCanceled();
     }
-    finish_job();
-    cout << ">> process_files" << endl;
+    in_file.close();
+    dest_file.close();
+    if (!stop && config->remove_processed)
+        in_file.remove();
 }
 
 void MainWindow::finish_job()
@@ -203,6 +278,25 @@ void MainWindow::clean_up()
 }
 
 void MainWindow::stop_processing()
+{
+    if (timer->isActive())
+        timer->stop();
+    if (job.isRunning()) {
+        job.cancel();
+        job.waitForFinished();
+    }
+    ui->startButton->setText(tr("Resume"));
+}
+
+void MainWindow::resume_processing()
+{
+    ui->startButton->setText(tr("Stop"));
+    run_job();
+    if (ui->repeatCheckBox->isChecked())
+        timer->start();
+}
+
+void MainWindow::cancel_processing()
 {
     if (timer->isActive())
         timer->stop();
@@ -224,54 +318,6 @@ void MainWindow::warn_bad_timing()
     QToolTip::showText(
         ui->timeEdit->pos() + pos(),
         tr("Timer set off while old job is running"));
-}
-
-void MainWindow::process_file(QPromise<void> &promise, const QString &file_name)
-{
-    using std::cout;
-    using std::endl;
-
-    uint64_t mask = config->bitmask;
-    QDir source_dir(config->input_path);
-    QDir dest_dir(config->output_path);
-
-    QFile in_file(source_dir.filePath(file_name));
-    in_file.open(QIODevice::ReadOnly);
-    QDataStream in(&in_file);
-
-    QString dest_file_name;
-    if (config->policy == Config::DuplicatesPolicy::kRename)
-        dest_file_name = find_new_file_name(dest_dir, file_name);
-    else
-        dest_file_name = file_name;
-    cout << "dest_file name: " << dest_file_name.toStdString() << endl;
-
-    QFile dest_file(dest_dir.filePath(dest_file_name));
-    dest_file.open(QIODevice::WriteOnly);
-    QDataStream out(&dest_file);
-
-    bool stop = false;
-
-    uint64_t buffer;
-    qint64 len;
-    while (!in.atEnd() && !stop) {
-        len = in.readRawData((char *)&buffer, 8);
-        if (config->operator_ == "AND") {
-            buffer &= mask;
-        } else if (config->operator_ == "OR") {
-            buffer |= mask;
-        } else if (config->operator_ == "XOR") {
-            buffer ^= mask;
-        }
-        out.writeRawData((char *)&buffer, len);
-
-        promise.suspendIfRequested();
-        stop = promise.isCanceled();
-    }
-    in_file.close();
-    dest_file.close();
-    if (!stop && config->remove_processed)
-        in_file.remove();
 }
 
 uint64_t MainWindow::parse_bit_mask(const QString &source)
