@@ -202,9 +202,12 @@ void MainWindow::process_files(QPromise<void> &promise)
     }
 
     bool stopped = false;
-    for (Config::ProgressData &file_progress : config->progress) {
-        if (file_progress.file_size != file_progress.progress)
+    for (qsizetype i = 0; i < config->progress.size(); ++i) {
+        Config::ProgressData &file_progress = config->progress[i];
+        if (file_progress.file_size != file_progress.progress) {
+            ui->statusbar->showMessage(tr("Processing file ") + QString::number(i + 1) + tr(" out of ") + QString::number(config->progress.size()));
             process_file(promise, file_progress);
+        }
 
         promise.suspendIfRequested();
         if (promise.isCanceled()) {
@@ -284,6 +287,7 @@ void MainWindow::process_file(QPromise<void> &promise, Config::ProgressData &fil
 
 void MainWindow::finish_job()
 {
+    ui->statusbar->showMessage(tr("All done"));
     if (!timer->isActive())
         clean_up();
 }
@@ -347,30 +351,3 @@ QString MainWindow::find_new_file_name(const QDir &dir, const QString &name)
     }
     return file.fileName();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
