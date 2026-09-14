@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>459</width>
-    <height>446</height>
+    <width>444</width>
+    <height>444</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -28,160 +28,172 @@
       </property>
      </spacer>
     </item>
-    <item row="0" column="1">
-     <layout class="QFormLayout" name="formLayout">
-      <property name="sizeConstraint">
-       <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
-      </property>
-      <item row="0" column="0">
-       <widget class="QLabel" name="inputPathLabel">
-        <property name="text">
-         <string>Input path:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="1">
-       <layout class="QHBoxLayout" name="inputPathLayout">
-        <item>
-         <widget class="QLineEdit" name="inputPathInput"/>
-        </item>
-        <item>
-         <widget class="QPushButton" name="inputPathButton">
-          <property name="text">
-           <string>Browse...</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="fileMaskLabel">
-        <property name="text">
-         <string>File mask:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QLineEdit" name="fileMaskInput">
-        <property name="text">
-         <string>.*</string>
-        </property>
-        <property name="placeholderText">
-         <string>regex</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="outputPathLabel">
-        <property name="text">
-         <string>Output path:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="1">
-       <layout class="QHBoxLayout" name="outputPathLayout">
-        <item>
-         <widget class="QLineEdit" name="outputPathInput">
-          <property name="text">
-           <string/>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="outputPathButton">
-          <property name="text">
-           <string>Browse...</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item row="5" column="1">
-       <widget class="QRadioButton" name="rewriteButton">
-        <property name="text">
-         <string>Rewrite duplicates</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">duplicatePolicyGroup</string>
-        </attribute>
-       </widget>
-      </item>
-      <item row="6" column="1">
-       <widget class="QRadioButton" name="renameButton">
-        <property name="text">
-         <string>Rename duplicates</string>
-        </property>
-        <attribute name="buttonGroup">
-         <string notr="true">duplicatePolicyGroup</string>
-        </attribute>
-       </widget>
-      </item>
-      <item row="8" column="1">
-       <widget class="QLineEdit" name="bitMaskInput">
-        <property name="inputMask">
-         <string>HH HH HH HH HH HH HH HH</string>
-        </property>
-        <property name="text">
-         <string>FF FF FF FF FF FF FF FF</string>
-        </property>
-        <property name="placeholderText">
-         <string>FF FF FF FF FF FF FF FF</string>
-        </property>
-       </widget>
-      </item>
-      <item row="8" column="0">
-       <widget class="QComboBox" name="operatorComboBox">
-        <item>
-         <property name="text">
-          <string>AND</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>OR</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>XOR</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item row="3" column="1">
-       <widget class="QCheckBox" name="deleteInputFilesCheckBox">
-        <property name="text">
-         <string>Delete input files</string>
-        </property>
-       </widget>
-      </item>
-      <item row="7" column="0">
-       <widget class="QCheckBox" name="repeatCheckBox">
-        <property name="text">
-         <string>Repeat</string>
-        </property>
-       </widget>
-      </item>
-      <item row="7" column="1">
-       <widget class="QTimeEdit" name="timeEdit">
-        <property name="currentSection">
-         <enum>QDateTimeEdit::Section::SecondSection</enum>
-        </property>
-        <property name="displayFormat">
-         <string>HH:mm:ss</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
     <item row="2" column="1">
      <widget class="QPushButton" name="startButton">
       <property name="text">
        <string>Start</string>
       </property>
+     </widget>
+    </item>
+    <item row="3" column="1">
+     <widget class="QPushButton" name="cancelButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Cancel</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <widget class="QWidget" name="form" native="true">
+      <layout class="QFormLayout" name="formLayout">
+       <property name="sizeConstraint">
+        <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
+       </property>
+       <item row="0" column="0">
+        <widget class="QLabel" name="inputPathLabel">
+         <property name="text">
+          <string>Input path:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <layout class="QHBoxLayout" name="inputPathLayout">
+         <item>
+          <widget class="QLineEdit" name="inputPathInput"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="inputPathButton">
+           <property name="text">
+            <string>Browse...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="fileMaskLabel">
+         <property name="text">
+          <string>File mask:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QLineEdit" name="fileMaskInput">
+         <property name="text">
+          <string>.*</string>
+         </property>
+         <property name="placeholderText">
+          <string>regex</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QCheckBox" name="deleteInputFilesCheckBox">
+         <property name="text">
+          <string>Delete input files</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="outputPathLabel">
+         <property name="text">
+          <string>Output path:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <layout class="QHBoxLayout" name="outputPathLayout">
+         <item>
+          <widget class="QLineEdit" name="outputPathInput">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="outputPathButton">
+           <property name="text">
+            <string>Browse...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="5" column="1">
+        <widget class="QRadioButton" name="rewriteButton">
+         <property name="text">
+          <string>Rewrite duplicates</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+         <attribute name="buttonGroup">
+          <string notr="true">duplicatePolicyGroup</string>
+         </attribute>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QRadioButton" name="renameButton">
+         <property name="text">
+          <string>Rename duplicates</string>
+         </property>
+         <attribute name="buttonGroup">
+          <string notr="true">duplicatePolicyGroup</string>
+         </attribute>
+        </widget>
+       </item>
+       <item row="7" column="0">
+        <widget class="QCheckBox" name="repeatCheckBox">
+         <property name="text">
+          <string>Repeat</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <widget class="QTimeEdit" name="timeEdit">
+         <property name="currentSection">
+          <enum>QDateTimeEdit::Section::SecondSection</enum>
+         </property>
+         <property name="displayFormat">
+          <string>HH:mm:ss</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0">
+        <widget class="QComboBox" name="operatorComboBox">
+         <item>
+          <property name="text">
+           <string>AND</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>OR</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>XOR</string>
+          </property>
+         </item>
+        </widget>
+       </item>
+       <item row="8" column="1">
+        <widget class="QLineEdit" name="bitMaskInput">
+         <property name="inputMask">
+          <string>HH HH HH HH HH HH HH HH</string>
+         </property>
+         <property name="text">
+          <string>FF FF FF FF FF FF FF FF</string>
+         </property>
+         <property name="placeholderText">
+          <string>FF FF FF FF FF FF FF FF</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </widget>
     </item>
    </layout>
@@ -191,7 +203,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>459</width>
+     <width>444</width>
      <height>23</height>
     </rect>
    </property>

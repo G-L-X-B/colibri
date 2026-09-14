@@ -34,6 +34,8 @@ private slots:
 
     void on_startButton_clicked();
 
+    void on_cancelButton_clicked();
+
 private:
     struct Config {
         enum DuplicatesPolicy {kRewrte, kRename};
@@ -57,30 +59,30 @@ private:
         QList<ProgressData> progress;
     };
 
+    // Higher-level control functions
+
     void start_processing();
+    // stop, then resume
+    void stop_processing();
+    void resume_processing();
+    // abort, drop progress
+    void cancel_processing();
 
+    // Beware the pipeline
     void gather_config();
-
     void run_job();
 
     void process_files(QPromise<void> &promise);
-
     void prepare_files();
-
     void process_file(QPromise<void> &promise, Config::ProgressData &file_name);
 
     void finish_job();
     void clean_up();
 
-    // stop, then resume
-    void stop_processing();
-
-    void resume_processing();
-
-    // abort, drop progress
-    void cancel_processing();
-
     void warn_bad_timing();
+
+    void freeze_form();
+    void unfreeze_form();
 
     uint64_t parse_bit_mask(const QString &source);
     QStringList filter_matching_filenames(const QStringList &source);

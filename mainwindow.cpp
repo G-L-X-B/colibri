@@ -1,7 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include <iostream>
 #include <utility>
 
 #include <QtConcurrent/QtConcurrentRun>
@@ -74,21 +73,58 @@ void MainWindow::on_startButton_clicked()
     }
 }
 
+void MainWindow::on_cancelButton_clicked()
+{
+    cancel_processing();
+}
+
 void MainWindow::start_processing()
 {
+    freeze_form();
     gather_config();
     if (config != nullptr) {
         ui->startButton->setText(tr("Stop"));
+        ui->cancelButton->setEnabled(true);
         run_job();
         if (ui->repeatCheckBox->isChecked())
             timer->start();
+    } else {
+        unfreeze_form();
     }
+}
+
+void MainWindow::stop_processing()
+{
+    if (timer->isActive())
+        timer->stop();
+    if (job.isRunning()) {
+        job.cancel();
+        job.waitForFinished();
+    }
+    ui->startButton->setText(tr("Resume"));
+}
+
+void MainWindow::resume_processing()
+{
+    ui->startButton->setText(tr("Stop"));
+    run_job();
+    if (ui->repeatCheckBox->isChecked())
+        timer->start();
+}
+
+void MainWindow::cancel_processing()
+{
+    if (timer->isActive())
+        timer->stop();
+    if (job.isRunning()) {
+        job.cancel();
+        job.waitForFinished();
+    }
+    clean_up();
 }
 
 void MainWindow::gather_config()
 {
-    using std::cout;
-    using std::endl;
     QString pattern = ui->fileMaskInput->text();
     QRegularExpression regex(QRegularExpression::anchoredPattern(pattern));
     if (!regex.isValid()) {
@@ -134,7 +170,6 @@ void MainWindow::gather_config()
     tmp->policy = static_cast<Config::DuplicatesPolicy>(ui->duplicatePolicyGroup->checkedId());
     tmp->remove_processed = ui->deleteInputFilesCheckBox->isChecked();
     tmp->started = false;
-    // tmp->progress = QList<Config::ProgressData>();
 
     if (tmp->input_path == tmp->output_path) {
         QToolTip::showText(
@@ -142,20 +177,10 @@ void MainWindow::gather_config()
             tr("Output path must differ from input path"));
         return;
     }
-
-    cout << "input_path: " << tmp->input_path.toStdString() << endl;
-    cout << "output_path: " << tmp->output_path.toStdString() << endl;
-    cout << "operator_: " << tmp->operator_.toStdString() << endl;
-    cout << "file_regex: " << tmp->file_regex.pattern().toStdString() << endl;
-    cout << "bitmask: " << std::hex << tmp->bitmask << std::dec << endl;
-    cout << "policy: " << tmp->policy << endl;
-    cout << "remove_processed: " << std::boolalpha << tmp->remove_processed << endl;
-
     config.swap(tmp);
 
     if (ui->repeatCheckBox->isChecked()) {
         QTime time = ui->timeEdit->time();
-        cout << "msec time since start of day: " << time.msecsSinceStartOfDay() << endl;
         timer->setInterval(time.msecsSinceStartOfDay());
     }
 }
@@ -171,10 +196,6 @@ void MainWindow::run_job()
 
 void MainWindow::process_files(QPromise<void> &promise)
 {
-    using std::cout;
-    using std::endl;
-    cout << "<< process_files" << endl;
-
     if (!config->started) {
         prepare_files();
         config->started = true;
@@ -193,7 +214,6 @@ void MainWindow::process_files(QPromise<void> &promise)
     }
     if (!stopped)
         finish_job();
-    cout << ">> process_files" << endl;
 }
 
 void MainWindow::prepare_files()
@@ -219,10 +239,7 @@ void MainWindow::prepare_files()
 
 void MainWindow::process_file(QPromise<void> &promise, Config::ProgressData &file_progress)
 {
-    using std::cout;
-    using std::endl;
-
-    uint64_t mask = config->bitmask;
+    const uint64_t mask = config->bitmask;
 
     QFile in_file(file_progress.input_filename);
     in_file.open(QIODevice::ReadOnly);
@@ -274,43 +291,9 @@ void MainWindow::finish_job()
 void MainWindow::clean_up()
 {
     ui->startButton->setText(tr("Start"));
+    ui->cancelButton->setEnabled(false);
     config.reset();
-}
-
-void MainWindow::stop_processing()
-{
-    if (timer->isActive())
-        timer->stop();
-    if (job.isRunning()) {
-        job.cancel();
-        job.waitForFinished();
-    }
-    ui->startButton->setText(tr("Resume"));
-}
-
-void MainWindow::resume_processing()
-{
-    ui->startButton->setText(tr("Stop"));
-    run_job();
-    if (ui->repeatCheckBox->isChecked())
-        timer->start();
-}
-
-void MainWindow::cancel_processing()
-{
-    if (timer->isActive())
-        timer->stop();
-    /*
-     * Control flow enters this function if the job is running
-     * or if the timer is active. If the job is not running, call
-     * clean up function explicitly.
-     */
-    if (job.isRunning()) {
-        job.cancel();
-        job.waitForFinished();
-    } else {
-        clean_up();
-    }
+    unfreeze_form();
 }
 
 void MainWindow::warn_bad_timing()
@@ -318,6 +301,16 @@ void MainWindow::warn_bad_timing()
     QToolTip::showText(
         ui->timeEdit->pos() + pos(),
         tr("Timer set off while old job is running"));
+}
+
+void MainWindow::freeze_form()
+{
+    ui->form->setEnabled(false);
+}
+
+void MainWindow::unfreeze_form()
+{
+    ui->form->setEnabled(true);
 }
 
 uint64_t MainWindow::parse_bit_mask(const QString &source)
